@@ -1,0 +1,8 @@
+
+################## Global veriable refrencess #########
+
+Jenkins > Job> Pipeline syntax > currentBuild > displayName
+
+keep below varible above the pipeline
+
+currentBuild.displayName = "onlineShopping-#"+currentBuild.number

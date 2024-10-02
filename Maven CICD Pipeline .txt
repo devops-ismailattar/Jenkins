@@ -1,0 +1,79 @@
+Create an ec2 instace
+
+install tomcat on ec2 instance refer below link 
+
+https://tomcat.apache.org/download-90.cgi
+
+$ cd /opt
+
+$ wget https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.94/bin/apache-tomcat-9.0.94.tar.gz
+
+$ tar -xvf  apache-tomcat-9.0.94.tar.gz
+
+install java 
+
+$ sudo apt update
+$ sudo apt install default-jdk
+$ java -version
+
+$ cd /opt/apache-tomcat-9.0.94/bin
+
+start tomcat
+
+$  ./startup.sh
+
+aceess tomcat with publicip:8080
+
+Now you have a war file on jenkins server at webapp/target/webapp.war and need to copy to tomcat server at path /opt/apache-tomcat-9.0.94/webapps
+
+Install SSH Agen plugin in jenkins
+
+Lets wrtie a pipeline
+
+
+
+now on jenkins server 
+
+$ cd /var/lib/jenkins/workspace/maven project/webapp/target
+
+we need to send this file to tomcat 
+
+go to your jenkins job  pipeline  add new stage
+
+pipeline{
+    agent any
+    stages{
+        stage("clone repo"){
+            steps{
+                checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/devops-ismailattar/hello-world.git']])
+                
+            }
+        }
+        
+        stage("mvn packange insall"){
+            steps{
+                sh "mvn clean install"
+            }
+        }
+        
+        
+        stage("copy war file tomcat server"){
+            steps{
+                sshagent(['tomcat']){
+                   // some block
+                   sh """
+                   
+                   scp -o StrictHostKeyChecking=no webapp/target/*.war ubuntu@172.31.10.169:/opt/apache-tomcat-9.0.94/webapps
+                   ssh ubuntu@172.31.10.169 /opt/apache-tomcat-9.0.94/bin/shutdown.sh
+                   ssh ubuntu@172.31.10.169 /opt/apache-tomcat-9.0.94/bin/startup.sh
+                   
+                   
+                   """
+                    
+                }
+                
+                
+            }
+        }
+    }
+}

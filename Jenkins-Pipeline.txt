@@ -1,0 +1,61 @@
+config file
+
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: <CA_CERTIFICATE_DATA>
+    server: <API_SERVER_URL>
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    namespace: default
+    user: jenkins
+  name: jenkins-context
+current-context: jenkins-context
+kind: Config
+users:
+- name: jenkins
+  user:
+    token: <SERVICE_ACCOUNT_TOKEN>
+
+Jenkins Pipeline 
+
+pipeline {
+    agent any
+    
+    environment {
+        KUBECONFIG_FILE = 'user1'
+        // Add kubectl binary path to PATH environment variable
+        PATH = "/var/lib/jenkins/bin:$PATH"  // Adjust based on where kubectl is installed
+    }
+
+    stages {
+        stage('Clone GitHub Repo') {
+            steps {
+                git branch: 'main', url: 'https://github.com/devops-ismailattar/k8s.git'
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([file(credentialsId: "${KUBECONFIG_FILE}", variable: 'KUBECONFIG')]) {
+                    // Apply the Kubernetes YAML file using kubectl
+                    sh "kubectl apply -f deployment.yaml"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment successful!"
+        }
+        failure {
+            echo "Deployment failed!"
+        }
+    }
+}
+
+
+

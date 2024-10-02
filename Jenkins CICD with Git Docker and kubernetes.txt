@@ -1,0 +1,84 @@
+######################### Jenkins CICD Intigration with Git,Docker,Kubernates#############################
+In Kubernetes cluster-
+Create A Service Account in K8s cluster
+Setup and RBAC for Jenkins User with token
+Create a kubeconfig file for jenkins user 
+
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: <CA_CERTIFICATE_DATA>
+    server: <API_SERVER_URL>
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    namespace: default
+    user: jenkins
+  name: jenkins-context
+current-context: jenkins-context
+kind: Config
+users:
+- name: jenkins
+  user:
+    token: <SERVICE_ACCOUNT_TOKEN>
+	
+Jenkins server
+Install Docker Kubectl on jenkins server
+provide docker permission to jenkins user
+
+$ usermod -aG docker jenkins
+
+Restart Jenkins 
+
+Go to Jenkins > Manage Plugin > and install kubernetes plugin
+Go to Jenkins > Manage cloud > add credential for kubernetes and test connection 
+
+Create a pipeline
+
+pipeline{
+    agent any
+    stages{
+        stage("clone repo"){
+            steps{
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/devops-ismailattar/Node-app.git']])
+            }
+        }
+        
+        
+        stage("build image and push to hub"){
+            steps{
+                withCredentials([string(credentialsId: 'docker-pass', variable: 'dockerPWD')]) {
+                    sh """
+                    docker build -t my-image .
+                    docker tag my-image attarismail/node-js.1
+                    echo ${dockerPWD} | docker login -u attarismail --password-stdin
+                    docker push attarismail/node-js.1
+                    
+                    """
+                    
+                }
+            }
+        }
+        
+        stage("deployment to k8s"){
+            steps{
+                withKubeConfig(credentialsId: 'kube-secret') {
+                    sh """
+                    /var/lib/jenkins/bin/kubectl create -f pods.yml
+                    /var/lib/jenkins/bin/kubectl create -f services.yml
+                    /var/lib/jenkins/bin/kubectl get pod 
+                    """
+                }
+               
+            }
+        }
+        
+        
+    }
+}
+
+
+execute the pipeline
+
+

@@ -1,0 +1,68 @@
+
+
+
+create a namespace
+create a service account in that ns
+create role and rolebinidng 
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: namespace1
+  name: jenkins-role
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups: ["apps"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-rolebinding
+  namespace: namespace1
+subjects:
+- kind: ServiceAccount
+  name: jenkins # "change the username what you want
+roleRef:
+  kind: Role #this must be Role or ClusterRole
+  name: jenkins-role # this must match the name of the Role or ClusterRole you wish to bind to
+  apiGroup:  rbac.authorization.k8s.io
+
+
+
+create token 
+
+kubectl create token jenkins --duration=87699m -n namespace1
+
+
+
+create kubeconfig file 
+
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: <CA_CERTIFICATE_DATA>
+    server: <API_SERVER_URL>
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    namespace: default
+    user: jenkins
+  name: jenkins-context
+current-context: jenkins-context
+kind: Config
+users:
+- name: jenkins
+  user:
+    token: <SERVICE_ACCOUNT_TOKEN>
+	
+	
+go to jenkins  >  cloud > add cloud > kubernates> add credential and credential id upload kubeconfig file > test connection 
+
+create pipeline now 
+
